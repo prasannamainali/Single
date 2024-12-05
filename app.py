@@ -1,3 +1,4 @@
+from turtle import st
 import alpaca_trade_api as tradeapi
 import time
 
