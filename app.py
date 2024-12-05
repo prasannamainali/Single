@@ -1,4 +1,4 @@
-from turtle import st
+import streamlit as st
 import alpaca_trade_api as tradeapi
 import time
 
