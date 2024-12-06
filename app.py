@@ -10,8 +10,18 @@ BASE_URL = "https://paper-api.alpaca.markets"
 # Initialize Alpaca API
 api = tradeapi.REST(API_KEY, API_SECRET, BASE_URL)
 
-# List of stocks to trade
-top_stocks = ['AAPL', 'MSFT', 'GOOG', 'AMZN', 'TSLA']
+# Expanded list of popular stocks
+top_stocks = [
+    'AAPL', 'MSFT', 'GOOG', 'AMZN', 'TSLA', 'META', 'NVDA', 'NFLX', 'ADBE', 'INTC',
+    'AMD', 'BABA', 'PYPL', 'CRM', 'ORCL', 'SQ', 'SHOP', 'SPOT', 'UBER', 'LYFT',
+    'DIS', 'NKE', 'HD', 'WMT', 'TGT', 'COST', 'MCD', 'SBUX', 'KO', 'PEP',
+    'JPM', 'BAC', 'GS', 'C', 'MS', 'WFC', 'T', 'VZ', 'V', 'MA',
+    'XOM', 'CVX', 'BP', 'F', 'GM', 'BA', 'LMT', 'RTX', 'CAT', 'DE',
+    'UNH', 'JNJ', 'PFE', 'ABBV', 'MRNA', 'GILD', 'BIIB', 'REGN', 'AMGN', 'CVS',
+    'PG', 'CL', 'KMB', 'MO', 'PM', 'MDLZ', 'HSY', 'KHC', 'GIS', 'SYY',
+    'TSM', 'MU', 'TXN', 'ASML', 'QCOM', 'AVGO', 'NXPI', 'ADI', 'LRCX', 'AMAT',
+    'ZM', 'DOCU', 'SNOW', 'PLTR', 'TWLO', 'ETSY', 'FSLY', 'CRWD', 'OKTA', 'ZS'
+]
 positions = {}  # To track holdings and reference prices
 total_loss = {}  # To track total loss for each stock
 
@@ -69,10 +79,10 @@ def calculate_stock_pnl(symbol):
 # Main trading loop
 while True:
     cash, portfolio_value = get_account_balance()
-    balance_usage = portfolio_value - cash
-    print(f"Cash: ${cash}, Portfolio Value: ${portfolio_value}, Balance Usage: ${balance_usage}")
+    balance_usage = (portfolio_value - cash) / portfolio_value
+    print(f"Cash: ${cash}, Portfolio Value: ${portfolio_value}, Balance Usage: {balance_usage:.2%}")
 
-    if balance_usage / portfolio_value <= 0.5:  # If balance usage is under 50%
+    if balance_usage <= 0.5:  # If balance usage is under 50%
         for stock in top_stocks:
             try:
                 price = get_stock_price(stock)
