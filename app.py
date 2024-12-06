@@ -11,17 +11,7 @@ BASE_URL = "https://paper-api.alpaca.markets"
 api = tradeapi.REST(API_KEY, API_SECRET, BASE_URL)
 
 # Expanded list of popular stocks
-top_stocks = [
-    'AAPL', 'MSFT', 'GOOG', 'AMZN', 'TSLA', 'META', 'NVDA', 'NFLX', 'ADBE', 'INTC',
-    'AMD', 'BABA', 'PYPL', 'CRM', 'ORCL', 'SQ', 'SHOP', 'SPOT', 'UBER', 'LYFT',
-    'DIS', 'NKE', 'HD', 'WMT', 'TGT', 'COST', 'MCD', 'SBUX', 'KO', 'PEP',
-    'JPM', 'BAC', 'GS', 'C', 'MS', 'WFC', 'T', 'VZ', 'V', 'MA',
-    'XOM', 'CVX', 'BP', 'F', 'GM', 'BA', 'LMT', 'RTX', 'CAT', 'DE',
-    'UNH', 'JNJ', 'PFE', 'ABBV', 'MRNA', 'GILD', 'BIIB', 'REGN', 'AMGN', 'CVS',
-    'PG', 'CL', 'KMB', 'MO', 'PM', 'MDLZ', 'HSY', 'KHC', 'GIS', 'SYY',
-    'TSM', 'MU', 'TXN', 'ASML', 'QCOM', 'AVGO', 'NXPI', 'ADI', 'LRCX', 'AMAT',
-    'ZM', 'DOCU', 'SNOW', 'PLTR', 'TWLO', 'ETSY', 'FSLY', 'CRWD', 'OKTA', 'ZS'
-]
+top_stocks = ['NVDA', 'TSLA', 'ETSY', 'AMD', 'META']
 positions = {}  # To track holdings and reference prices
 total_loss = {}  # To track total loss for each stock
 
