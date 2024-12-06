@@ -24,6 +24,15 @@ def get_stock_price(symbol):
         print(f"Error fetching price for {symbol}: {e}")
         return None
 
+# Function to get account balance
+def get_account_balance():
+    try:
+        account = api.get_account()
+        return float(account.cash), float(account.portfolio_value)
+    except Exception as e:
+        print(f"Error fetching account balance: {e}")
+        return 0, 0
+
 # Function to buy stock
 def buy_stock(symbol, qty):
     try:
@@ -47,57 +56,71 @@ def sell_stock(symbol, qty):
     except Exception as e:
         print(f"Error selling {symbol}: {e}")
 
-# Function to calculate total profit/loss
-def calculate_pnl(symbol, current_price):
+# Function to calculate profit/loss for a stock
+def calculate_stock_pnl(symbol):
     if symbol in positions:
-        reference_price = positions[symbol]['reference_price']
         qty = positions[symbol]['qty']
-        return (current_price - reference_price) * qty
+        reference_price = positions[symbol]['reference_price']
+        current_price = get_stock_price(symbol)
+        if current_price:
+            return (current_price - reference_price) * qty
     return 0
 
 # Main trading loop
 while True:
-    for stock in top_stocks:
-        try:
-            price = get_stock_price(stock)
-            if price is None:
-                print(f"Skipping {stock}: No trade data found")
-                continue
+    cash, portfolio_value = get_account_balance()
+    balance_usage = portfolio_value - cash
+    print(f"Cash: ${cash}, Portfolio Value: ${portfolio_value}, Balance Usage: ${balance_usage}")
 
-            print(f"Current price of {stock}: ${price:.2f}")
+    if balance_usage / portfolio_value <= 0.5:  # If balance usage is under 50%
+        for stock in top_stocks:
+            try:
+                price = get_stock_price(stock)
+                if price is None:
+                    print(f"Skipping {stock}: No trade data found")
+                    continue
 
-            # Initialize reference price and total loss
-            if stock not in positions:
-                positions[stock] = {'qty': 0, 'reference_price': price}
-                total_loss[stock] = 0
+                print(f"Current price of {stock}: ${price:.2f}")
 
-            # Calculate profit/loss
-            pnl = calculate_pnl(stock, price)
+                # Initialize reference price and total loss
+                if stock not in positions:
+                    positions[stock] = {'qty': 0, 'reference_price': price}
+                    total_loss[stock] = 0
 
-            # Check profit to sell
-            if pnl > 5:
-                sell_stock(stock, positions[stock]['qty'])
-                print(f"Sold all shares of {stock} for profit of ${pnl:.2f}")
-                continue
+                # Calculate individual stock profit/loss
+                pnl = calculate_stock_pnl(stock)
 
-            # Check loss to stop buying
-            if pnl < -10 and total_loss[stock] <= 50:
-                total_loss[stock] += abs(pnl)
-                print(f"Total loss for {stock} is ${total_loss[stock]:.2f}, pausing buys.")
-                continue
+                # Sell logic: If profit exceeds $5
+                if pnl > 5:
+                    sell_stock(stock, positions[stock]['qty'])
+                    print(f"Sold all shares of {stock} for a profit of ${pnl:.2f}")
+                    continue
 
-            # Stop completely if loss exceeds $100
-            if total_loss[stock] > 100:
-                print(f"Total loss for {stock} exceeded $100. Stopping trading for {stock}.")
-                top_stocks.remove(stock)
-                continue
+                # Stop buying logic: If loss exceeds $10
+                if pnl < -10 and total_loss[stock] <= 50:
+                    total_loss[stock] += abs(pnl)
+                    print(f"Total loss for {stock} is ${total_loss[stock]:.2f}, pausing buys.")
+                    continue
 
-            # Buy 1 share every minute
-            if pnl > -50:  # Resume if loss exceeds $50 but less than $100
-                buy_stock(stock, 1)
-                positions[stock]['reference_price'] = price  # Update reference price
+                # Stop completely if loss exceeds $100
+                if total_loss[stock] > 100:
+                    print(f"Total loss for {stock} exceeded $100. Stopping trading for {stock}.")
+                    top_stocks.remove(stock)
+                    continue
 
-        except Exception as e:
-            print(f"Error processing {stock}: {e}")
+                # Buy 1 share every minute
+                if pnl > -50:  # Resume if loss exceeds $50 but less than $100
+                    buy_stock(stock, 1)
+                    positions[stock]['reference_price'] = price  # Update reference price
+
+            except Exception as e:
+                print(f"Error processing {stock}: {e}")
+
+    else:  # If balance usage exceeds 50%, monitor and sell for $20 profit per stock
+        for stock, data in positions.items():
+            pnl = calculate_stock_pnl(stock)
+            if pnl > 20:
+                sell_stock(stock, data['qty'])
+                print(f"Sold all holdings of {stock} for individual profit of ${pnl:.2f}")
 
     time.sleep(60)  # Wait 1 minute before next iteration
