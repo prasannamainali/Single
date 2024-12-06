@@ -12,7 +12,8 @@ api = tradeapi.REST(API_KEY, API_SECRET, BASE_URL)
 
 # List of stocks to trade
 top_stocks = ['AAPL', 'MSFT', 'GOOG', 'AMZN', 'TSLA']
-positions = {}  # To track holdings
+positions = {}  # To track holdings and reference prices
+total_loss = {}  # To track total loss for each stock
 
 # Function to get the current stock price
 def get_stock_price(symbol):
@@ -29,8 +30,9 @@ def buy_stock(symbol, qty):
         api.submit_order(symbol=symbol, qty=qty, side='buy', type='market', time_in_force='gtc')
         print(f"Bought {qty} shares of {symbol}")
         if symbol not in positions:
-            positions[symbol] = 0
-        positions[symbol] += qty
+            positions[symbol] = {'qty': 0, 'reference_price': 0}
+            total_loss[symbol] = 0
+        positions[symbol]['qty'] += qty
     except Exception as e:
         print(f"Error buying {symbol}: {e}")
 
@@ -39,11 +41,19 @@ def sell_stock(symbol, qty):
     try:
         api.submit_order(symbol=symbol, qty=qty, side='sell', type='market', time_in_force='gtc')
         print(f"Sold {qty} shares of {symbol}")
-        positions[symbol] -= qty
-        if positions[symbol] <= 0:
+        positions[symbol]['qty'] -= qty
+        if positions[symbol]['qty'] <= 0:
             del positions[symbol]
     except Exception as e:
         print(f"Error selling {symbol}: {e}")
+
+# Function to calculate total profit/loss
+def calculate_pnl(symbol, current_price):
+    if symbol in positions:
+        reference_price = positions[symbol]['reference_price']
+        qty = positions[symbol]['qty']
+        return (current_price - reference_price) * qty
+    return 0
 
 # Main trading loop
 while True:
@@ -56,28 +66,38 @@ while True:
 
             print(f"Current price of {stock}: ${price:.2f}")
 
-            # If the stock is not in positions, decide to buy
+            # Initialize reference price and total loss
             if stock not in positions:
-                reference_price = price  # Reference price when considering buying
-                drop_percentage = (reference_price - price) / reference_price
-                if -0.75 < drop_percentage <= -0.005:  # Buy if within range
-                    buy_stock(stock, 2)
-                    positions[stock] = reference_price
-                elif drop_percentage <= -0.75:  # Stop buying if too low
-                    print(f"Stock {stock} is down more than 0.75%, stopping further buys.")
-                    continue
+                positions[stock] = {'qty': 0, 'reference_price': price}
+                total_loss[stock] = 0
 
-            # If the stock is already in positions, check for selling conditions
-            if stock in positions:
-                reference_price = positions[stock]
-                gain_percentage = (price - reference_price) / reference_price
-                if gain_percentage >= 0.005:  # Sell if price increased by 0.5%
-                    sell_stock(stock, positions[stock])
-                elif (reference_price - price) / reference_price <= -0.75:  # Stop further actions if down > 0.75%
-                    print(f"Stock {stock} is down more than 0.75%, holding position.")
-                    continue
+            # Calculate profit/loss
+            pnl = calculate_pnl(stock, price)
+
+            # Check profit to sell
+            if pnl > 5:
+                sell_stock(stock, positions[stock]['qty'])
+                print(f"Sold all shares of {stock} for profit of ${pnl:.2f}")
+                continue
+
+            # Check loss to stop buying
+            if pnl < -10 and total_loss[stock] <= 50:
+                total_loss[stock] += abs(pnl)
+                print(f"Total loss for {stock} is ${total_loss[stock]:.2f}, pausing buys.")
+                continue
+
+            # Stop completely if loss exceeds $100
+            if total_loss[stock] > 100:
+                print(f"Total loss for {stock} exceeded $100. Stopping trading for {stock}.")
+                top_stocks.remove(stock)
+                continue
+
+            # Buy 1 share every minute
+            if pnl > -50:  # Resume if loss exceeds $50 but less than $100
+                buy_stock(stock, 1)
+                positions[stock]['reference_price'] = price  # Update reference price
 
         except Exception as e:
             print(f"Error processing {stock}: {e}")
 
-    time.sleep(60)  # Check every minute
+    time.sleep(60)  # Wait 1 minute before next iteration
